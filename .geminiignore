@@ -3,3 +3,6 @@ dist/
 .git/
 build/
 *.log
+.next/
+.cache/
+coverage/

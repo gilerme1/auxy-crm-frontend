@@ -140,6 +140,7 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">;
 
 function toast({ ...props }: Toast) {
+  // No Sonner integration; use internal toast mechanism
   const id = genId();
 
   const update = (props: ToasterToast) =>

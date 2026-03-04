@@ -7,9 +7,7 @@ import {
 } from "./auth-storage";
 import type { AuthTokens } from "@/types/auth";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") ||
-  "http://127.0.0.1:3001/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

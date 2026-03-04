@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react"; // 1. Importamos Suspense
 import { useRouter, useSearchParams } from "next/navigation";
 import { setAuthTokens } from "@/lib/auth-storage";
 import type { AuthTokens } from "@/types/auth";
 
-export default function AuthCallbackPage() {
+// 2. Movemos la lógica a un componente interno
+function AuthCallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -16,7 +17,6 @@ export default function AuthCallbackPage() {
     if (accessToken && refreshToken) {
       const tokens: AuthTokens = { accessToken, refreshToken };
       setAuthTokens(tokens);
-      // En un siguiente paso podemos redirigir al dashboard real
       router.replace("/");
     } else {
       router.replace("/auth/error");
@@ -30,3 +30,15 @@ export default function AuthCallbackPage() {
   );
 }
 
+// 3. El export default envuelve todo en Suspense
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-zinc-600">Cargando...</p>
+      </div>
+    }>
+      <AuthCallbackHandler />
+    </Suspense>
+  );
+}

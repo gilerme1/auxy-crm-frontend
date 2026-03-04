@@ -149,11 +149,13 @@ export default function UsuariosPage() {
       await loadUsuarios();
     } catch (error: any) {
       console.error("Error al crear usuario:", error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, `Error al crear ${isProveedor ? "conductor" : "usuario"}`),
-        variant: "destructive",
-      });
+      if (!isNetworkConnectionError(error)) {
+        toast({
+          title: "Error",
+          description: getErrorMessage(error, `Error al crear ${isProveedor ? "conductor" : "usuario"}`),
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }

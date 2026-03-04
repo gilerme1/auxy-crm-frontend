@@ -15,12 +15,11 @@ export function useAuthLoad({ enabled = true }: UseAuthLoadOptions = {}) {
       return;
     }
 
-    if (!authLoading && user !== undefined) {
-      setIsReady(true);
-    } else if (!authLoading && user === undefined) {
+    // Mark as ready once authentication loading has finished
+    if (!authLoading) {
       setIsReady(true);
     }
-  }, [authLoading, user, enabled]);
+  }, [authLoading, enabled]);
 
   return {
     user,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useToast } from "@/hooks/use-toast";
+import { useAuthLoad } from "@/hooks/use-auth-load";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/select";
 import { createUsuario, deleteUsuario, getUsuarios, updateUsuario } from "@/lib/api-data";
 import { getVehiculosProveedor, assignOperadorToVehiculo, unassignOperadorFromVehiculo } from "@/lib/api-data";
+import { notify } from "@/lib/notifier";
+import { confirmDelete } from "@/lib/confirm";
 import { getErrorMessage, isNetworkConnectionError } from "@/lib/error-utils";
 import type { Usuario } from "@/types/user";
 
@@ -41,7 +43,8 @@ interface VehiculoProveedor {
 
 export default function ConductoresPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
+  const { isReady } = useAuthLoad();
+  // use toast via notifier wrapper (Plan A)
   const [conductores, setConductores] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,16 +53,15 @@ export default function ConductoresPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [vehiculos, setVehiculos] = useState<VehiculoProveedor[]>([]);
+  const [vehiculosLoading, setVehiculosLoading] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) return;
+    if (!isReady) return;
     if (dataLoaded) return;
-    
     loadConductores();
     loadVehiculos();
     setDataLoaded(true);
-  }, [authLoading, user, dataLoaded]);
+  }, [isReady, dataLoaded]);
 
   const loadConductores = async () => {
     try {
@@ -68,13 +70,7 @@ export default function ConductoresPage() {
       setConductores(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error("Error cargando conductores:", error);
-      if (!isNetworkConnectionError(error)) {
-        toast({
-          title: "Error",
-          description: getErrorMessage(error, "No se pudieron cargar los conductores"),
-          variant: "destructive",
-        });
-      }
+      notify({ title: "Error", description: getErrorMessage(error, "No se pudieron cargar los conductores"), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -82,10 +78,15 @@ export default function ConductoresPage() {
 
   const loadVehiculos = async () => {
     try {
+      setVehiculosLoading(true);
       const data = await getVehiculosProveedor();
       setVehiculos(data || []);
     } catch (error: any) {
       console.error("Error cargando vehículos:", error);
+      notify({ title: "Error", description: getErrorMessage(error, "Error al cargar vehículos"), variant: "destructive" });
+      // Suggestion: could add a retry here in the future
+    } finally {
+      setVehiculosLoading(false);
     }
   };
 
@@ -114,20 +115,13 @@ export default function ConductoresPage() {
         await assignOperadorToVehiculo(vehiculoId, nuevoConductor.id);
       }
 
-      toast({
-        title: "Éxito",
-        description: `Conductor ${email} creado exitosamente`,
-      });
+      notify({ title: "Éxito", description: `Conductor ${email} creado exitosamente`, variant: "success" });
 
       setIsDialogOpen(false);
       await loadConductores();
     } catch (error: any) {
       console.error("Error al crear conductor:", error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Error al crear conductor"),
-        variant: "destructive",
-      });
+      notify({ title: "Error", description: getErrorMessage(error, "Error al crear conductor"), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -161,42 +155,31 @@ export default function ConductoresPage() {
         await assignOperadorToVehiculo(vehiculoId, editingConductor.id);
       }
 
-      toast({
-        title: "Éxito",
-        description: "Conductor actualizado correctamente",
-      });
+      notify({ title: "Éxito", description: "Conductor actualizado correctamente", variant: "success" });
 
       setIsEditOpen(false);
       setEditingConductor(null);
       await loadConductores();
     } catch (error: any) {
       console.error("Error al actualizar conductor:", error);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Error al actualizar conductor"),
-        variant: "destructive",
-      });
+      notify({ title: "Error", description: getErrorMessage(error, "Error al actualizar conductor"), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteConductor = async (conductor: Usuario) => {
-    if (confirm(`¿Estás seguro de eliminar al conductor ${conductor.email}?`)) {
-      try {
-        if (conductor.vehiculoProveedorId) {
-          await unassignOperadorFromVehiculo(conductor.vehiculoProveedorId, conductor.id);
-        }
-        await deleteUsuario(conductor.id);
-        toast({ title: "Conductor eliminado" });
-        await loadConductores();
-      } catch (e: any) {
-        toast({ 
-          title: "Error", 
-          description: getErrorMessage(e, "Error al eliminar conductor"), 
-          variant: "destructive" 
-        });
+    const confirmed = await confirmDelete(`¿Estás seguro de eliminar al conductor ${conductor.email}?`);
+    if (!confirmed) return;
+    try {
+      if (conductor.vehiculoProveedorId) {
+        await unassignOperadorFromVehiculo(conductor.vehiculoProveedorId, conductor.id);
       }
+      await deleteUsuario(conductor.id);
+      notify({ title: "Conductor eliminado", variant: "success" });
+      await loadConductores();
+    } catch (e: any) {
+      notify({ title: "Error", description: getErrorMessage(e, "Error al eliminar conductor"), variant: "destructive" });
     }
   };
 
@@ -241,18 +224,24 @@ export default function ConductoresPage() {
               </div>
               <div>
                 <Label htmlFor="vehiculoId">Vehículo Asignado</Label>
-                <Select name="vehiculoId">
+                <Select name="vehiculoId" disabled={vehiculosLoading}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sin vehículo asignado" />
+                    <SelectValue placeholder={vehiculosLoading ? "Cargando..." : "Sin vehículo asignado"} />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ninguno">Sin vehículo</SelectItem>
-                    {vehiculos.map((v) => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.marca} {v.modelo} ({v.patente})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {vehiculosLoading ? (
+                    <SelectContent>
+                      <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                    </SelectContent>
+                  ) : (
+                    <SelectContent>
+                      <SelectItem value="ninguno">Sin vehículo</SelectItem>
+                      {vehiculos.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>
+                          {v.marca} {v.modelo} ({v.patente})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  )}
                 </Select>
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -287,12 +276,17 @@ export default function ConductoresPage() {
                   <Label htmlFor="edit-telefono">Teléfono</Label>
                   <Input id="edit-telefono" name="telefono" type="tel" defaultValue={editingConductor.telefono || ""} />
                 </div>
-                <div>
-                  <Label htmlFor="edit-vehiculoId">Vehículo Asignado</Label>
-                  <Select name="vehiculoId" defaultValue={editingConductor.vehiculoProveedorId || "ninguno"}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin vehículo asignado" />
-                    </SelectTrigger>
+              <div>
+                <Label htmlFor="edit-vehiculoId">Vehículo Asignado</Label>
+                <Select name="vehiculoId" defaultValue={editingConductor.vehiculoProveedorId || "ninguno"} disabled={vehiculosLoading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={vehiculosLoading ? "Cargando..." : "Sin vehículo asignado"} />
+                  </SelectTrigger>
+                  {vehiculosLoading ? (
+                    <SelectContent>
+                      <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                    </SelectContent>
+                  ) : (
                     <SelectContent>
                       <SelectItem value="ninguno">Sin vehículo</SelectItem>
                       {vehiculos.map((v) => (
@@ -301,8 +295,9 @@ export default function ConductoresPage() {
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
-                </div>
+                  )}
+                </Select>
+              </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? "Guardando..." : "Guardar Cambios"}
                 </Button>

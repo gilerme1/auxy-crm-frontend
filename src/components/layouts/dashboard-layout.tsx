@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import ErrorBoundary from "../ErrorBoundary";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -212,8 +213,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-4 md:p-8 w-full">{children}</div>
+      {/* Content with error boundary */}
+      <div className="flex-1 overflow-auto p-4 md:p-8 w-full">
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </div>
       </div>
     </div>
   );
