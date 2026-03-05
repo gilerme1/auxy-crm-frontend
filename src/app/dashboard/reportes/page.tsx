@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
-import { AdminDashboard } from "@/components/dashboard/admin-dashboard";
+import { AdminReportesDashboard } from "@/components/dashboard/admin-reportes-dashboard";
 import { ProviderDashboard } from "@/components/dashboard/provider-dashboard";
 import { ClientDashboard } from "@/components/dashboard/client-dashboard";
 
@@ -11,7 +11,7 @@ export default function ReportesPage() {
   if (!user) return null;
 
   if (user.rol === "SUPER_ADMIN") {
-    return <AdminDashboard />;
+    return <AdminReportesDashboard />;
   }
 
   if (user.rol === "PROVEEDOR_ADMIN") {

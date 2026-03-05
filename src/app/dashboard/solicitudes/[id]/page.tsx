@@ -26,7 +26,7 @@ import {
   type EstadoSolicitud,
 } from "@/lib/api-data";
 import { getErrorMessage } from "@/lib/error-utils";
-import { ArrowLeft, Clock, MapPin, Wrench, CheckCircle2, Star, Trash2, Camera, Image as ImageIcon, X, Plus, DollarSign } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Wrench, CheckCircle2, Star, Camera, Image as ImageIcon, X, Plus, DollarSign } from "lucide-react";
 
 export default function SolicitudDetailPage() {
   const { id } = useParams();
@@ -156,13 +156,20 @@ export default function SolicitudDetailPage() {
 
   if (!solicitud) return <div>No encontrada</div>;
 
-  const isOperador = user?.rol === "PROVEEDOR_OPERADOR";
+  // ✅ PROVEEDOR_ADMIN también puede operar como operador de campo
+  const isOperador = user?.rol === "PROVEEDOR_OPERADOR" || user?.rol === "PROVEEDOR_ADMIN";
   const isCliente = user?.rol === "CLIENTE_ADMIN" || user?.rol === "CLIENTE_OPERADOR";
+
+  // ✅ CLIENTE_ADMIN puede calificar cualquier solicitud de su empresa
+  // ✅ CLIENTE_OPERADOR solo puede calificar la que él mismo creó
+  const puedeCalificar =
+    user?.rol === "CLIENTE_ADMIN" ||
+    (user?.rol === "CLIENTE_OPERADOR" && solicitud.solicitadoPor?.id === user?.id);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         onClick={() => router.back()}
         className="mb-2 text-gray-600 hover:text-auxy-navy"
       >
@@ -253,9 +260,9 @@ export default function SolicitudDetailPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {solicitud.fotos.map((foto: string, index: number) => (
                     <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border">
-                      <img 
-                        src={foto} 
-                        alt={`Evidencia ${index + 1}`} 
+                      <img
+                        src={foto}
+                        alt={`Evidencia ${index + 1}`}
                         className="w-full h-full object-cover transition-transform group-hover:scale-110"
                       />
                       {isOperador && solicitud.estado !== "FINALIZADO" && (
@@ -266,9 +273,9 @@ export default function SolicitudDetailPage() {
                           <X className="h-3 w-3" />
                         </button>
                       )}
-                      <a 
-                        href={foto} 
-                        target="_blank" 
+                      <a
+                        href={foto}
+                        target="_blank"
                         rel="noreferrer"
                         className="absolute bottom-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                       >
@@ -285,7 +292,7 @@ export default function SolicitudDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Formulario de Acción */}
+          {/* Formulario Finalizar — solo operador asignado */}
           {solicitud.estado === "EN_SERVICIO" && isOperador && (
             <Card className="border-purple-200 bg-purple-50/30">
               <CardHeader>
@@ -299,12 +306,12 @@ export default function SolicitudDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="costoFinal">Costo Final ($) *</Label>
-                      <Input 
-                        id="costoFinal" 
-                        name="costoFinal" 
-                        type="number" 
-                        step="0.01" 
-                        required 
+                      <Input
+                        id="costoFinal"
+                        name="costoFinal"
+                        type="number"
+                        step="0.01"
+                        required
                         placeholder="0.00"
                         className="border-purple-200 focus:ring-purple-500"
                       />
@@ -312,16 +319,16 @@ export default function SolicitudDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="observaciones">Observaciones Técnicas (Opcional)</Label>
-                    <Textarea 
-                      id="observaciones" 
-                      name="observaciones" 
-                      placeholder="Ej: Se cambió la batería correctamente..." 
+                    <Textarea
+                      id="observaciones"
+                      name="observaciones"
+                      placeholder="Ej: Se cambió la batería correctamente..."
                       className="border-purple-200"
                     />
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white" 
+                  <Button
+                    type="submit"
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                     disabled={submitting}
                   >
                     {submitting ? "Procesando..." : "Confirmar Cierre de Servicio"}
@@ -331,7 +338,8 @@ export default function SolicitudDetailPage() {
             </Card>
           )}
 
-          {solicitud.estado === "FINALIZADO" && isCliente && !solicitud.calificacion && (
+          {/* ✅ Formulario Calificar — solo quien puede calificar */}
+          {solicitud.estado === "FINALIZADO" && puedeCalificar && !solicitud.calificacion && (
             <Card className="border-yellow-200 bg-yellow-50/30">
               <CardHeader>
                 <CardTitle className="text-yellow-900 flex items-center gap-2">
@@ -355,16 +363,16 @@ export default function SolicitudDetailPage() {
                   </div>
                   <div className="space-y-2 text-left">
                     <Label htmlFor="comentario">Comentario (Opcional)</Label>
-                    <Textarea 
-                      id="comentario" 
-                      name="comentario" 
-                      placeholder="Contanos tu experiencia..." 
+                    <Textarea
+                      id="comentario"
+                      name="comentario"
+                      placeholder="Contanos tu experiencia..."
                       className="border-yellow-200"
                     />
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold" 
+                  <Button
+                    type="submit"
+                    className="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold"
                     disabled={submitting}
                   >
                     {submitting ? "Enviando..." : "Enviar Calificación"}
@@ -374,23 +382,34 @@ export default function SolicitudDetailPage() {
             </Card>
           )}
 
+          {/* ✅ Aviso cuando el cliente operador no puede calificar (no fue su solicitud) */}
+          {solicitud.estado === "FINALIZADO" && isCliente && !puedeCalificar && !solicitud.calificacion && (
+            <Card className="border-gray-100 bg-gray-50/50">
+              <CardContent className="py-4">
+                <p className="text-sm text-gray-400 text-center italic">
+                  Solo el operador que creó esta solicitud puede calificar el servicio.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {solicitud.calificacion > 0 && (
             <Card className="bg-green-50/50 border-green-100">
-               <CardHeader>
-                 <CardTitle className="text-sm font-bold text-green-800 flex items-center gap-2">
-                   Calificación recibida: {solicitud.calificacion} / 5
-                 </CardTitle>
-               </CardHeader>
-               {solicitud.comentarioCliente && (
-                 <CardContent>
-                   <p className="text-sm italic text-gray-600">"{solicitud.comentarioCliente}"</p>
-                 </CardContent>
-               )}
+              <CardHeader>
+                <CardTitle className="text-sm font-bold text-green-800 flex items-center gap-2">
+                  Calificación recibida: {solicitud.calificacion} / 5
+                </CardTitle>
+              </CardHeader>
+              {solicitud.comentarioCliente && (
+                <CardContent>
+                  <p className="text-sm italic text-gray-600">"{solicitud.comentarioCliente}"</p>
+                </CardContent>
+              )}
             </Card>
           )}
         </div>
 
-        {/* Columna Lateral - Detalles de Recursos */}
+        {/* Columna Lateral */}
         <div className="space-y-6">
           <Card>
             <CardHeader className="pb-2">
@@ -423,71 +442,70 @@ export default function SolicitudDetailPage() {
                     <div className="mt-2 space-y-3">
                       <div>
                         <p className="text-[10px] text-gray-500">Operador:</p>
-                        <p className="text-sm font-medium">{solicitud.atendidoPor ? `${solicitud.atendidoPor.nombre} ${solicitud.atendidoPor.apellido}` : 'Sin asignar'}</p>
+                        <p className="text-sm font-medium">
+                          {solicitud.atendidoPor
+                            ? `${solicitud.atendidoPor.nombre} ${solicitud.atendidoPor.apellido}`
+                            : "No asignado"}
+                        </p>
                       </div>
                       {solicitud.vehiculoProveedor && (
                         <div>
-                          <p className="text-[10px] text-gray-500">Unidad de Auxilio:</p>
-                          <p className="text-sm font-medium">{solicitud.vehiculoProveedor.marca} {solicitud.vehiculoProveedor.modelo}</p>
-                          <p className="text-xs font-mono text-auxy-navy bg-slate-100 w-fit px-1">{solicitud.vehiculoProveedor.patente}</p>
+                          <p className="text-[10px] text-gray-500">Vehículo de auxilio:</p>
+                          <p className="text-sm font-medium">
+                            {solicitud.vehiculoProveedor.marca} {solicitud.vehiculoProveedor.modelo}
+                          </p>
+                          <p className="text-xs text-gray-400 font-mono">{solicitud.vehiculoProveedor.patente}</p>
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
+
+                {solicitud.proveedor && (
+                  <div className="flex items-start gap-2">
+                    <DollarSign className="h-4 w-4 text-auxy-navy mt-1" />
+                    <div>
+                      <p className="text-xs font-bold text-gray-400 uppercase">Proveedor</p>
+                      <p className="text-sm mt-1">{solicitud.proveedor.razonSocial}</p>
+                      {solicitud.costoFinal && (
+                        <p className="text-sm font-bold text-green-700 mt-1">
+                          Costo final: ${Number(solicitud.costoFinal).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          {/* Costo del Servicio */}
-          {(solicitud.estado === "FINALIZADO" || solicitud.estado === "CANCELADO") && solicitud.costoFinal !== undefined && solicitud.costoFinal !== null && (
-            <Card className={solicitud.estado === "CANCELADO" ? "border-red-200 bg-red-50/30" : "border-green-200 bg-green-50/30"}>
+          {solicitud.vehiculo && (
+            <Card>
               <CardHeader className="pb-2">
-                <CardTitle className={`text-sm font-semibold uppercase flex items-center gap-2 ${solicitud.estado === "CANCELADO" ? "text-red-700" : "text-green-700"}`}>
-                  <DollarSign className="h-4 w-4" />
-                  {solicitud.estado === "CANCELADO" ? "Servicio Cancelado" : "Costo del Servicio"}
-                </CardTitle>
+                <CardTitle className="text-sm font-semibold uppercase text-gray-500">Vehículo del Cliente</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Monto final:</span>
-                  <span className={`text-2xl font-bold ${solicitud.estado === "CANCELADO" ? "text-red-600" : "text-green-600"}`}>
-                    ${Number(solicitud.costoFinal).toFixed(2)}
-                  </span>
-                </div>
-                {solicitud.observaciones && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Observaciones:</p>
-                    <p className="text-sm mt-1">{solicitud.observaciones}</p>
-                  </div>
-                )}
+              <CardContent className="space-y-2 text-sm">
+                <p><span className="text-gray-500">Patente:</span> <span className="font-mono font-bold">{solicitud.vehiculo.patente}</span></p>
+                <p><span className="text-gray-500">Vehículo:</span> {solicitud.vehiculo.marca} {solicitud.vehiculo.modelo}</p>
+                <p><span className="text-gray-500">Tipo:</span> {solicitud.vehiculo.tipo}</p>
               </CardContent>
             </Card>
           )}
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold uppercase text-gray-500">Vehículo del Cliente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {solicitud.vehiculo ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end border-b pb-2">
-                    <div>
-                      <p className="text-lg font-bold text-auxy-navy">{solicitud.vehiculo.patente}</p>
-                      <p className="text-sm text-gray-600">{solicitud.vehiculo.marca} {solicitud.vehiculo.modelo}</p>
-                    </div>
-                  </div>
-                  <div className="pt-2">
-                    <p className="text-[10px] text-gray-400">EMPRESA:</p>
-                    <p className="text-xs font-medium">{solicitud.empresa?.razonSocial}</p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-400">Sin datos del vehículo</p>
-              )}
-            </CardContent>
-          </Card>
+          {solicitud.solicitadoPor && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-semibold uppercase text-gray-500">Solicitado por</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm">
+                <p className="font-medium">{solicitud.solicitadoPor.nombre} {solicitud.solicitadoPor.apellido}</p>
+                <p className="text-gray-500">{solicitud.solicitadoPor.email}</p>
+                {solicitud.solicitadoPor.telefono && (
+                  <p className="text-gray-500">{solicitud.solicitadoPor.telefono}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

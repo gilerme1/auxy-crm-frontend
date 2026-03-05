@@ -39,7 +39,7 @@ import {
 import { getErrorMessage, isNetworkConnectionError } from "@/lib/error-utils";
 import { MapSelector } from "@/components/maps";
 
-const ESTADO_COLORS: Record<EstadoSolicitud, string> = {
+const ESTADO_COLORS: Record<string, string> = {
   PENDIENTE: "bg-yellow-100 text-yellow-800",
   ASIGNADO: "bg-blue-100 text-blue-800",
   EN_CAMINO: "bg-indigo-100 text-indigo-800",
@@ -48,7 +48,7 @@ const ESTADO_COLORS: Record<EstadoSolicitud, string> = {
   CANCELADO: "bg-red-100 text-red-800",
 };
 
-const PRIORIDAD_COLORS: Record<Prioridad, string> = {
+const PRIORIDAD_COLORS: Record<string, string> = {
   BAJA: "bg-gray-100 text-gray-700",
   MEDIA: "bg-yellow-100 text-yellow-700",
   ALTA: "bg-orange-100 text-orange-700",
@@ -107,7 +107,7 @@ export default function SolicitudesPage() {
     if (authLoading) return;
     if (!user) return;
     if (dataLoaded) return;
-    
+
     loadSolicitudes();
     if (isCliente) loadVehiculos();
     setDataLoaded(true);
@@ -169,7 +169,6 @@ export default function SolicitudesPage() {
 
       notify({ title: "Solicitud creada exitosamente" });
       setIsDialogOpen(false);
-      // Reset form location
       setFormLocation({ lat: -34.6037, lng: -58.3816, address: "" });
       await loadSolicitudes();
     } catch (error: any) {
@@ -202,21 +201,19 @@ export default function SolicitudesPage() {
     const solicitud = solicitudes.find(s => s.id === id);
     if (!solicitud) return;
 
-    // Si es Admin de Proveedor, mostramos diálogo para delegar
     if (user?.rol === "PROVEEDOR_ADMIN") {
       try {
         setLoading(true);
         const [ops, vehs] = await Promise.all([getUsuarios(), getVehiculosProveedor()]);
-        
+
         const validOps = Array.isArray(ops) ? ops : [];
         setOperadoresParaDelegar(validOps);
         setVehiculosParaDelegar(Array.isArray(vehs) ? vehs : []);
-        
-        // Pre-seleccionar el usuario actual
+
         setSelectedOperadorId(user.id);
         const currentOp = validOps.find((o: any) => o.id === user.id);
         setSelectedVehiculoId(currentOp?.vehiculoProveedorId || "ninguno");
-        
+
         setSolicitudToAceptar(solicitud);
         setIsAceptarOpen(true);
       } catch (error) {
@@ -227,7 +224,7 @@ export default function SolicitudesPage() {
       return;
     }
 
-    // Si es Operador, acepta directamente (auto-asignación)
+    // Operador acepta directamente
     try {
       await aceptarSolicitud(id);
       notify({ title: "Solicitud tomada exitosamente", description: "Ahora puedes gestionar este servicio." });
@@ -244,7 +241,7 @@ export default function SolicitudesPage() {
 
   const handleConfirmarAceptarConDelegacion = async (formData: FormData) => {
     if (!solicitudToAceptar) return;
-    
+
     const operadorId = formData.get("operadorId") as string;
     const vehiculoProveedorId = formData.get("vehiculoProveedorId") as string;
 
@@ -254,7 +251,7 @@ export default function SolicitudesPage() {
         operadorId: operadorId !== "ninguno" ? operadorId : undefined,
         vehiculoProveedorId: vehiculoProveedorId !== "ninguno" ? vehiculoProveedorId : undefined
       });
-      
+
       notify({ title: "Solicitud delegada exitosamente" });
       setIsAceptarOpen(false);
       setSolicitudToAceptar(null);
@@ -325,25 +322,23 @@ export default function SolicitudesPage() {
                     <select
                       id="tipo"
                       name="tipo"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Seleccionar...</option>
-                      {TIPOS_AUXILIO.map((t) => (
+                      <option value="">Seleccionar tipo</option>
+                      {TIPOS_AUXILIO.map(t => (
                         <option key={t.value} value={t.value}>{t.label}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <Label htmlFor="prioridad">Prioridad *</Label>
+                    <Label htmlFor="prioridad">Prioridad</Label>
                     <select
                       id="prioridad"
                       name="prioridad"
-                      defaultValue="MEDIA"
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
-                      {PRIORIDADES.map((p) => (
+                      {PRIORIDADES.map(p => (
                         <option key={p.value} value={p.value}>{p.label}</option>
                       ))}
                     </select>
@@ -355,11 +350,11 @@ export default function SolicitudesPage() {
                   <select
                     id="vehiculoId"
                     name="vehiculoId"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Seleccionar vehículo...</option>
-                    {vehiculos.map((v) => (
+                    <option value="">Seleccionar vehículo</option>
+                    {vehiculos.map(v => (
                       <option key={v.id} value={v.id}>
                         {v.patente} — {v.marca} {v.modelo}
                       </option>
@@ -369,11 +364,7 @@ export default function SolicitudesPage() {
 
                 <div>
                   <Label htmlFor="direccion">Dirección *</Label>
-                  <Input 
-                    id="direccion" 
-                    name="direccion" 
-                    placeholder="Av. Corrientes 1234, CABA" 
-                    required 
+                  <Input id="direccion" name="direccion" placeholder="Ej: Corrientes 1234, CABA" required
                     value={formLocation.address}
                     onChange={(e) => setFormLocation(prev => ({ ...prev, address: e.target.value }))}
                   />
@@ -382,7 +373,7 @@ export default function SolicitudesPage() {
                 <div className="space-y-2">
                   <Label>Ubicación exacta *</Label>
                   <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
-                    <MapSelector 
+                    <MapSelector
                       onLocationChange={(lat, lng, address) => {
                         setFormLocation(prev => ({
                           lat,
@@ -451,7 +442,7 @@ export default function SolicitudesPage() {
               <p>Tipo de auxilio: <strong>{TIPOS_AUXILIO.find(t => t.value === solicitudToAceptar?.tipo)?.label || solicitudToAceptar?.tipo}</strong></p>
               <p className="text-xs text-amber-700 font-medium mt-2">⚠️ Debes asignársela a un vehículo que cumpla el auxilio requerido.</p>
             </div>
-            
+
             <div>
               <Label htmlFor="operadorId">Conductor Responsable</Label>
               <select
@@ -575,6 +566,7 @@ export default function SolicitudesPage() {
                               Ver
                             </Button>
                           </Link>
+
                           {isCliente && (s.estado === "PENDIENTE" || s.estado === "ASIGNADO") && (
                             <Button
                               size="sm"
@@ -585,6 +577,7 @@ export default function SolicitudesPage() {
                               Cancelar
                             </Button>
                           )}
+
                           {isProveedor && s.estado === "PENDIENTE" && (
                             <Button
                               size="sm"
@@ -594,16 +587,28 @@ export default function SolicitudesPage() {
                               Aceptar
                             </Button>
                           )}
+
+                          {/* ✅ ASIGNADO: solo el operador asignado puede iniciar viaje */}
                           {isProveedor && s.estado === "ASIGNADO" && (
-                            <Button
-                              size="sm"
-                              className="bg-blue-600 hover:bg-blue-700 text-white"
-                              onClick={() => handleCambiarEstado(s.id, "EN_CAMINO")}
-                            >
-                              Iniciar Viaje
-                            </Button>
+                            s.atendidoPor?.id === user?.id ? (
+                              <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                onClick={() => handleCambiarEstado(s.id, "EN_CAMINO")}
+                              >
+                                Iniciar Viaje
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic px-1 self-center">
+                                Asignado a {s.atendidoPor
+                                  ? `${s.atendidoPor.nombre} ${s.atendidoPor.apellido}`
+                                  : "otro operador"}
+                              </span>
+                            )
                           )}
-                          {isProveedor && s.estado === "EN_CAMINO" && (
+
+                          {/* ✅ EN_CAMINO: solo el operador asignado puede marcar llegada */}
+                          {isProveedor && s.estado === "EN_CAMINO" && s.atendidoPor?.id === user?.id && (
                             <Button
                               size="sm"
                               className="bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -612,7 +617,9 @@ export default function SolicitudesPage() {
                               Llegué al Lugar
                             </Button>
                           )}
-                          {isProveedor && s.estado === "EN_SERVICIO" && (
+
+                          {/* ✅ EN_SERVICIO: solo el operador asignado puede finalizar */}
+                          {isProveedor && s.estado === "EN_SERVICIO" && s.atendidoPor?.id === user?.id && (
                             <Link href={`/dashboard/solicitudes/${s.id}`}>
                               <Button
                                 size="sm"
