@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/auth-context";
 
 const inter = Inter({
@@ -11,7 +11,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Auxy CRM",
-  description: "Plataforma de gestión de auxilio vehicular",
+  description: "Plataforma de gestion de auxilio vehicular",
   icons: {
     icon: "/favicon.ico",
   },
@@ -24,12 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body
-        className={`${inter.variable} font-sans antialiased`}
-      >
+      <body className={`${inter.variable} font-sans antialiased`}>
         <AuthProvider>
           {children}
-          <Toaster />
+          <Toaster richColors closeButton position="top-right" />
         </AuthProvider>
       </body>
     </html>

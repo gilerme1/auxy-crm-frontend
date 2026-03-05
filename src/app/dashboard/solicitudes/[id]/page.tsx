@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifier";
+import { confirmDelete } from "@/lib/confirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +32,6 @@ export default function SolicitudDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const [solicitud, setSolicitud] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +48,7 @@ export default function SolicitudDetailPage() {
       const data = await getSolicitud(id as string);
       setSolicitud(data);
     } catch (error) {
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "No se pudo cargar la solicitud"),
         variant: "destructive",
@@ -67,10 +67,10 @@ export default function SolicitudDetailPage() {
     setSubmitting(true);
     try {
       await finalizarSolicitud(id as string, { costoFinal, observaciones });
-      toast({ title: "Servicio finalizado exitosamente" });
+      notify({ title: "Servicio finalizado exitosamente" });
       loadSolicitud();
     } catch (error) {
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "Error al finalizar el servicio"),
         variant: "destructive",
@@ -86,17 +86,17 @@ export default function SolicitudDetailPage() {
     const comentario = formData.get("comentario") as string;
 
     if (rating === 0) {
-      toast({ title: "Por favor selecciona una calificación", variant: "destructive" });
+      notify({ title: "Por favor selecciona una calificación", variant: "destructive" });
       return;
     }
 
     setSubmitting(true);
     try {
       await calificarSolicitud(id as string, { calificacion: rating, comentario });
-      toast({ title: "Gracias por tu calificación" });
+      notify({ title: "Gracias por tu calificación" });
       loadSolicitud();
     } catch (error) {
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "Error al calificar"),
         variant: "destructive",
@@ -113,10 +113,10 @@ export default function SolicitudDetailPage() {
     setSubmitting(true);
     try {
       await uploadFotosSolicitud(id as string, files);
-      toast({ title: "Fotos subidas con éxito" });
+      notify({ title: "Fotos subidas con éxito" });
       loadSolicitud();
     } catch (error) {
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "Error al subir fotos"),
         variant: "destructive",
@@ -127,15 +127,16 @@ export default function SolicitudDetailPage() {
   };
 
   const handleDeleteFoto = async (fotoUrl: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar esta foto?")) return;
+    const ok = await confirmDelete("¿Estás seguro de que quieres eliminar esta foto?");
+    if (!ok) return;
 
     setSubmitting(true);
     try {
       await deleteFotoSolicitud(id as string, fotoUrl);
-      toast({ title: "Foto eliminada" });
+      notify({ title: "Foto eliminada" });
       loadSolicitud();
     } catch (error) {
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "Error al eliminar foto"),
         variant: "destructive",

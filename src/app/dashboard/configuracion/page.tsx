@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifier";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { uploadFotoPerfil } from "@/lib/api-data";
@@ -10,7 +10,6 @@ import { Camera, User, Mail, Shield, Upload } from "lucide-react";
 
 export default function ConfiguracionPage() {
   const { user, refetchUser } = useAuth();
-  const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,10 +19,10 @@ export default function ConfiguracionPage() {
     setUploading(true);
     try {
       await uploadFotoPerfil(user.id, file);
-      toast({ title: "Foto de perfil actualizada" });
+      notify({ title: "Foto de perfil actualizada" });
       await refetchUser();
     } catch (error) {
-      toast({
+      notify({
         title: "Error",
         description: "No se pudo actualizar la foto de perfil",
         variant: "destructive",

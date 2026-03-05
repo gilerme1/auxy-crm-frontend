@@ -7,7 +7,13 @@ import {
 } from "./auth-storage";
 import type { AuthTokens } from "@/types/auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+// const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (process.env.NODE_ENV === 'development') {
+  console.log("🚀 Conectado a API:", API_BASE_URL);
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

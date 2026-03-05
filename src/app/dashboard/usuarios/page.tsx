@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifier";
+import { confirmDelete } from "@/lib/confirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +57,6 @@ interface VehiculoProveedor {
 
 export default function UsuariosPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,7 +90,7 @@ export default function UsuariosPage() {
     } catch (error: any) {
       console.error("Error cargando usuarios:", error);
       if (!isNetworkConnectionError(error)) {
-        toast({
+        notify({
           title: "Error",
           description: getErrorMessage(error, "No se pudieron cargar los usuarios"),
           variant: "destructive",
@@ -140,7 +140,7 @@ export default function UsuariosPage() {
         await assignOperadorToVehiculo(vehiculoId, nuevoUsuario.id);
       }
 
-      toast({
+      notify({
         title: "Éxito",
         description: `${isProveedor ? "Conductor" : "Usuario"} ${email} creado exitosamente`,
       });
@@ -150,7 +150,7 @@ export default function UsuariosPage() {
     } catch (error: any) {
       console.error("Error al crear usuario:", error);
       if (!isNetworkConnectionError(error)) {
-        toast({
+        notify({
           title: "Error",
           description: getErrorMessage(error, `Error al crear ${isProveedor ? "conductor" : "usuario"}`),
           variant: "destructive",
@@ -191,7 +191,7 @@ export default function UsuariosPage() {
         }
       }
 
-      toast({
+      notify({
         title: "Éxito",
         description: `${isProveedor ? "Conductor" : "Usuario"} actualizado correctamente`,
       });
@@ -201,7 +201,7 @@ export default function UsuariosPage() {
       await loadUsuarios();
     } catch (error: any) {
       console.error("Error al actualizar usuario:", error);
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, `Error al actualizar ${isProveedor ? "conductor" : "usuario"}`),
         variant: "destructive",
@@ -213,21 +213,21 @@ export default function UsuariosPage() {
 
   const handleDeleteUsuario = async (usr: Usuario) => {
     const word = isProveedor ? "conductor" : "usuario";
-    if (confirm(`¿Estás seguro de eliminar al ${word} ${usr.email}?`)) {
-      try {
-        if (isProveedor && usr.vehiculoProveedorId) {
-          await unassignOperadorFromVehiculo(usr.vehiculoProveedorId, usr.id);
-        }
-        await deleteUsuario(usr.id);
-        toast({ title: `${isProveedor ? "Conductor" : "Usuario"} eliminado` });
-        await loadUsuarios();
-      } catch (e: any) {
-        toast({ 
-          title: "Error", 
-          description: getErrorMessage(e, `Error al eliminar ${word}`), 
-          variant: "destructive" 
-        });
+    const ok = await confirmDelete(`¿Estás seguro de eliminar al ${word} ${usr.email}?`);
+    if (!ok) return;
+    try {
+      if (isProveedor && usr.vehiculoProveedorId) {
+        await unassignOperadorFromVehiculo(usr.vehiculoProveedorId, usr.id);
       }
+      await deleteUsuario(usr.id);
+      notify({ title: `${isProveedor ? "Conductor" : "Usuario"} eliminado` });
+      await loadUsuarios();
+    } catch (e: any) {
+      notify({ 
+        title: "Error", 
+        description: getErrorMessage(e, `Error al eliminar ${word}`), 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -372,8 +372,8 @@ export default function UsuariosPage() {
               <p className="text-gray-600">No hay {pageTitle.toLowerCase()} registrados</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="w-full max-w-full">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-3 px-4 font-medium text-gray-600">{isProveedor ? "Conductor" : "Usuario"}</th>
@@ -418,9 +418,9 @@ export default function UsuariosPage() {
                           {usr.isActive ? "Activo" : "Inactivo"}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right align-top">
                         {isAdmin && (
-                          <div className="flex gap-2 justify-end">
+                          <div className="flex flex-wrap gap-2 justify-end">
                             <Button 
                               variant="outline" 
                               size="sm"

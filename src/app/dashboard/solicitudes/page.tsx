@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifier";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -74,7 +74,6 @@ const PRIORIDADES: { value: Prioridad; label: string }[] = [
 
 export default function SolicitudesPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
 
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
@@ -122,7 +121,7 @@ export default function SolicitudesPage() {
     } catch (error: any) {
       console.error("Error cargando solicitudes:", error);
       if (!isNetworkConnectionError(error)) {
-        toast({
+        notify({
           title: "Error",
           description: getErrorMessage(error, "No se pudieron cargar las solicitudes"),
           variant: "destructive",
@@ -154,7 +153,7 @@ export default function SolicitudesPage() {
       const observaciones = formData.get("observaciones") as string;
 
       if (!tipo || !vehiculoId || !direccion) {
-        toast({ title: "Completa todos los campos obligatorios", variant: "destructive" });
+        notify({ title: "Completa todos los campos obligatorios", variant: "destructive" });
         return;
       }
 
@@ -168,14 +167,14 @@ export default function SolicitudesPage() {
         observaciones: observaciones || undefined,
       });
 
-      toast({ title: "Solicitud creada exitosamente" });
+      notify({ title: "Solicitud creada exitosamente" });
       setIsDialogOpen(false);
       // Reset form location
       setFormLocation({ lat: -34.6037, lng: -58.3816, address: "" });
       await loadSolicitudes();
     } catch (error: any) {
       console.error("Error al crear solicitud:", error);
-      toast({
+      notify({
         title: "Error al crear solicitud",
         description: getErrorMessage(error, "Error al crear solicitud"),
         variant: "destructive",
@@ -188,10 +187,10 @@ export default function SolicitudesPage() {
   const handleCambiarEstado = async (id: string, nuevoEstado: EstadoSolicitud) => {
     try {
       await cambiarEstadoSolicitud(id, nuevoEstado);
-      toast({ title: `Estado actualizado a ${nuevoEstado}` });
+      notify({ title: `Estado actualizado a ${nuevoEstado}` });
       await loadSolicitudes();
     } catch (error: any) {
-      toast({
+      notify({
         title: "Error al cambiar estado",
         description: getErrorMessage(error, "No se pudo actualizar el estado"),
         variant: "destructive",
@@ -221,7 +220,7 @@ export default function SolicitudesPage() {
         setSolicitudToAceptar(solicitud);
         setIsAceptarOpen(true);
       } catch (error) {
-        toast({ title: "Error", description: "No se pudieron cargar los recursos para delegar", variant: "destructive" });
+        notify({ title: "Error", description: "No se pudieron cargar los recursos para delegar", variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -231,11 +230,11 @@ export default function SolicitudesPage() {
     // Si es Operador, acepta directamente (auto-asignación)
     try {
       await aceptarSolicitud(id);
-      toast({ title: "Solicitud tomada exitosamente", description: "Ahora puedes gestionar este servicio." });
+      notify({ title: "Solicitud tomada exitosamente", description: "Ahora puedes gestionar este servicio." });
       await loadSolicitudes();
     } catch (error: any) {
       console.error("Error al aceptar solicitud:", error);
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "No se pudo tomar la solicitud"),
         variant: "destructive",
@@ -256,12 +255,12 @@ export default function SolicitudesPage() {
         vehiculoProveedorId: vehiculoProveedorId !== "ninguno" ? vehiculoProveedorId : undefined
       });
       
-      toast({ title: "Solicitud delegada exitosamente" });
+      notify({ title: "Solicitud delegada exitosamente" });
       setIsAceptarOpen(false);
       setSolicitudToAceptar(null);
       await loadSolicitudes();
     } catch (error: any) {
-      toast({
+      notify({
         title: "Error al delegar",
         description: getErrorMessage(error, "Error al delegar la solicitud"),
         variant: "destructive",
@@ -273,18 +272,18 @@ export default function SolicitudesPage() {
 
   const handleCancelar = async () => {
     if (!cancelId || !motivoCancelacion.trim()) {
-      toast({ title: "Ingresa un motivo de cancelación", variant: "destructive" });
+      notify({ title: "Ingresa un motivo de cancelación", variant: "destructive" });
       return;
     }
     try {
       await cancelarSolicitud(cancelId, motivoCancelacion);
-      toast({ title: "Solicitud cancelada" });
+      notify({ title: "Solicitud cancelada" });
       setCancelId(null);
       setMotivoCancelacion("");
       await loadSolicitudes();
     } catch (error: any) {
       console.error("Error al cancelar:", error);
-      toast({
+      notify({
         title: "Error al cancelar",
         description: getErrorMessage(error, "Error al cancelar"),
         variant: "destructive",
@@ -293,8 +292,8 @@ export default function SolicitudesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between">
+    <div className="space-y-6 max-w-full">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             {isCliente ? "Solicitudes de Auxilio" : isSuperAdmin ? "Todas las Solicitudes" : "Solicitudes de Servicio"}
@@ -501,7 +500,7 @@ export default function SolicitudesPage() {
         </DialogContent>
       </Dialog>
 
-      <Card>
+      <Card className="w-full max-w-full">
         <CardHeader>
           <CardTitle>Solicitudes</CardTitle>
           <CardDescription>
@@ -521,8 +520,8 @@ export default function SolicitudesPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="w-full max-w-full">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2 px-3 font-medium text-gray-600">N°</th>
@@ -540,7 +539,7 @@ export default function SolicitudesPage() {
                 <tbody>
                   {solicitudes.map((s) => (
                     <tr key={s.id} className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="py-2 px-3 font-mono text-xs">{s.numero}</td>
+                      <td className="py-2 px-3 font-mono text-xs break-all">{s.numero}</td>
                       <td className="py-2 px-3">
                         {TIPOS_AUXILIO.find((t) => t.value === s.tipo)?.label ?? s.tipo}
                       </td>
@@ -554,7 +553,7 @@ export default function SolicitudesPage() {
                           {s.prioridad}
                         </span>
                       </td>
-                      <td className="py-2 px-3 max-w-[200px] truncate" title={s.direccion}>
+                      <td className="py-2 px-3 break-words" title={s.direccion}>
                         {s.direccion}
                       </td>
                       <td className="py-2 px-3">
@@ -569,8 +568,8 @@ export default function SolicitudesPage() {
                       <td className="py-2 px-3 text-gray-500">
                         {new Date(s.fechaSolicitud).toLocaleDateString("es-AR")}
                       </td>
-                      <td className="py-2 px-3 text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="py-2 px-3 text-right align-top">
+                        <div className="flex flex-wrap justify-end gap-2">
                           <Link href={`/dashboard/solicitudes/${s.id}`}>
                             <Button size="sm" variant="ghost" className="text-gray-500">
                               Ver

@@ -147,7 +147,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden w-full relative">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden w-full relative">
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-30">
           <div className="flex items-center gap-3">
@@ -214,7 +214,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
 
       {/* Content with error boundary */}
-      <div className="flex-1 overflow-auto p-4 md:p-8 w-full">
+      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 w-full">
         <ErrorBoundary>{children}</ErrorBoundary>
       </div>
       </div>

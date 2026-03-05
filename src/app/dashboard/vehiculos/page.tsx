@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifier";
+import { confirmDelete } from "@/lib/confirm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +55,6 @@ const TIPOS_VEHICULO_PROVEEDOR: { value: TipoVehiculoProveedor; label: string }[
 
 export default function VehiculosPage() {
   const { user, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   const [vehiculos, setVehiculos] = useState<Vehiculo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -90,7 +90,7 @@ export default function VehiculosPage() {
 
       if (isCliente) {
         if (!user.empresaId) {
-          toast({
+          notify({
             title: "Sin empresa asignada",
             description: "Tu cuenta no tiene empresa. Contacta al administrador.",
             variant: "destructive",
@@ -102,7 +102,7 @@ export default function VehiculosPage() {
         setVehiculos(Array.isArray(data) ? data : []);
       } else if (isProveedor) {
         if (!user.proveedorId) {
-          toast({
+          notify({
             title: "Sin proveedor asignado",
             description: "Tu cuenta no tiene proveedor. Contacta al administrador.",
             variant: "destructive",
@@ -120,7 +120,7 @@ export default function VehiculosPage() {
     } catch (error: any) {
       console.error("Error cargando vehículos:", error);
       if (!isNetworkConnectionError(error)) {
-        toast({
+        notify({
           title: "Error",
           description: getErrorMessage(error, "No se pudieron cargar los vehículos"),
           variant: "destructive",
@@ -145,18 +145,18 @@ export default function VehiculosPage() {
         : [formData.get("tipo") as TipoVehiculo];
 
       if (!patente || patente.length < 6) {
-        toast({ title: "Patente inválida", description: "Mínimo 6 caracteres", variant: "destructive" });
+        notify({ title: "Patente inválida", description: "Mínimo 6 caracteres", variant: "destructive" });
         return;
       }
       if (isNaN(año) || año < 1900) {
-        toast({ title: "Año inválido", variant: "destructive" });
+        notify({ title: "Año inválido", variant: "destructive" });
         return;
       }
 
       if (isCliente || isSuperAdmin) {
         const empresaId = isCliente ? user!.empresaId! : (formData.get("empresaId") as string);
         if (!empresaId) {
-          toast({ title: "Falta empresaId", description: "Ingresa el ID de empresa", variant: "destructive" });
+          notify({ title: "Falta empresaId", description: "Ingresa el ID de empresa", variant: "destructive" });
           return;
         }
         await createVehiculo({
@@ -179,12 +179,12 @@ export default function VehiculosPage() {
         });
       }
 
-      toast({ title: "Vehículo registrado", description: `Patente ${patente}` });
+      notify({ title: "Vehículo registrado", description: `Patente ${patente}` });
       setIsDialogOpen(false);
       await loadVehiculos();
     } catch (error: any) {
       console.error("Error al registrar vehículo:", error);
-      toast({
+      notify({
         title: "Error al registrar",
         description: getErrorMessage(error, "No se pudo registrar el vehículo"),
         variant: "destructive",
@@ -217,13 +217,13 @@ export default function VehiculosPage() {
         await updateVehiculo(editingVehiculo.id, payload);
       }
 
-      toast({ title: "Vehículo actualizado", description: `Patente ${patente}` });
+      notify({ title: "Vehículo actualizado", description: `Patente ${patente}` });
       setIsEditOpen(false);
       setEditingVehiculo(null);
       await loadVehiculos();
     } catch (error: any) {
       console.error("Error al actualizar vehículo:", error);
-      toast({
+      notify({
         title: "Error al actualizar",
         description: getErrorMessage(error, "No se pudo actualizar el vehículo"),
         variant: "destructive",
@@ -234,7 +234,8 @@ export default function VehiculosPage() {
   };
 
   const handleDeleteVehiculo = async (id: string, patente: string) => {
-    if (!confirm(`¿Estás seguro de eliminar el vehículo con patente ${patente}?`)) return;
+    const ok = await confirmDelete(`¿Estás seguro de eliminar el vehículo con patente ${patente}?`);
+    if (!ok) return;
     
     try {
       if (isProveedor) {
@@ -242,11 +243,11 @@ export default function VehiculosPage() {
       } else {
         await deleteVehiculo(id);
       }
-      toast({ title: "Vehículo eliminado", description: `Patente ${patente}` });
+      notify({ title: "Vehículo eliminado", description: `Patente ${patente}` });
       await loadVehiculos();
     } catch (error: any) {
       console.error("Error al eliminar vehículo:", error);
-      toast({
+      notify({
         title: "Error",
         description: getErrorMessage(error, "No se pudo eliminar el vehículo"),
         variant: "destructive",
@@ -379,8 +380,8 @@ export default function VehiculosPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div className="w-full max-w-full">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2 px-3 font-medium text-gray-600">Patente</th>
@@ -415,8 +416,8 @@ export default function VehiculosPage() {
                         {new Date(v.createdAt).toLocaleDateString("es-AR")}
                       </td>
                       {isAdmin && (
-                        <td className="py-2 px-3 text-right">
-                          <div className="flex justify-end gap-2">
+                        <td className="py-2 px-3 text-right align-top">
+                          <div className="flex flex-wrap justify-end gap-2">
                             <Button 
                               variant="ghost" 
                               size="sm"

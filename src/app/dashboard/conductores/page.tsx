@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useAuthLoad } from "@/hooks/use-auth-load";
 import { Button } from "@/components/ui/button";
@@ -27,24 +27,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createUsuario, deleteUsuario, getUsuarios, updateUsuario } from "@/lib/api-data";
-import { getVehiculosProveedor, assignOperadorToVehiculo, unassignOperadorFromVehiculo } from "@/lib/api-data";
+import { 
+  createUsuario, 
+  deleteUsuario, 
+  getUsuarios, 
+  updateUsuario,
+  getVehiculosProveedor, 
+  assignOperadorToVehiculo, 
+  unassignOperadorFromVehiculo 
+} from "@/lib/api-data";
 import { notify } from "@/lib/notifier";
 import { confirmDelete } from "@/lib/confirm";
-import { getErrorMessage, isNetworkConnectionError } from "@/lib/error-utils";
+import { getErrorMessage } from "@/lib/error-utils";
 import type { Usuario } from "@/types/user";
 
+// Interfaz actualizada para incluir los operadores que vienen del backend
 interface VehiculoProveedor {
   id: string;
   patente: string;
   marca: string;
   modelo: string;
+  operadores?: { id: string }[]; 
 }
 
 export default function ConductoresPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const { isReady } = useAuthLoad();
-  // use toast via notifier wrapper (Plan A)
+  
   const [conductores, setConductores] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,24 +64,42 @@ export default function ConductoresPage() {
   const [vehiculos, setVehiculos] = useState<VehiculoProveedor[]>([]);
   const [vehiculosLoading, setVehiculosLoading] = useState(false);
 
+  // --- LÓGICA DE FILTRADO CORREGIDA ---
+  
+  // Para crear: Solo vehículos que NO tienen operadores
+  const vehiculosLibres = useMemo(() => 
+    vehiculos.filter((v) => !v.operadores || v.operadores.length === 0),
+    [vehiculos]
+  );
+
+  // Para editar: Vehículos libres O el vehículo que ya tiene el conductor actual
+  const vehiculosParaEdicion = useMemo(() => 
+    vehiculos.filter((v) => {
+      const sinOperadores = !v.operadores || v.operadores.length === 0;
+      const esElActual = v.id === editingConductor?.vehiculoProveedorId;
+      return sinOperadores || esElActual;
+    }),
+    [vehiculos, editingConductor]
+  );
+
   useEffect(() => {
-    if (!isReady) return;
-    if (dataLoaded) return;
-    loadConductores();
-    loadVehiculos();
+    if (!isReady || dataLoaded) return;
+    loadData();
     setDataLoaded(true);
   }, [isReady, dataLoaded]);
 
+  const loadData = async () => {
+    setLoading(true);
+    await Promise.all([loadConductores(), loadVehiculos()]);
+    setLoading(false);
+  };
+
   const loadConductores = async () => {
     try {
-      setLoading(true);
       const data = await getUsuarios();
       setConductores(Array.isArray(data) ? data : []);
-    } catch (error: any) {
-      console.error("Error cargando conductores:", error);
-      notify({ title: "Error", description: getErrorMessage(error, "No se pudieron cargar los conductores"), variant: "destructive" });
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      notify({ title: "Error", description: getErrorMessage(error, "Error al cargar conductores"), variant: "destructive" });
     }
   };
 
@@ -81,10 +108,8 @@ export default function ConductoresPage() {
       setVehiculosLoading(true);
       const data = await getVehiculosProveedor();
       setVehiculos(data || []);
-    } catch (error: any) {
-      console.error("Error cargando vehículos:", error);
+    } catch (error) {
       notify({ title: "Error", description: getErrorMessage(error, "Error al cargar vehículos"), variant: "destructive" });
-      // Suggestion: could add a retry here in the future
     } finally {
       setVehiculosLoading(false);
     }
@@ -93,19 +118,14 @@ export default function ConductoresPage() {
   const handleAddConductor = async (formData: FormData) => {
     setIsSubmitting(true);
     try {
-      const nombre = formData.get("nombre") as string;
-      const apellido = formData.get("apellido") as string;
-      const email = formData.get("email") as string;
-      const password = formData.get("password") as string;
-      const telefono = formData.get("telefono") as string;
       const vehiculoId = formData.get("vehiculoId") as string;
 
       const nuevoConductor = await createUsuario({
-        nombre,
-        apellido,
-        email,
-        password,
-        telefono,
+        nombre: formData.get("nombre") as string,
+        apellido: formData.get("apellido") as string,
+        email: formData.get("email") as string,
+        password: formData.get("password") as string,
+        telefono: formData.get("telefono") as string,
         rol: "PROVEEDOR_OPERADOR",
         empresaId: user?.empresaId ?? undefined,
         proveedorId: user?.proveedorId ?? undefined,
@@ -115,13 +135,11 @@ export default function ConductoresPage() {
         await assignOperadorToVehiculo(vehiculoId, nuevoConductor.id);
       }
 
-      notify({ title: "Éxito", description: `Conductor ${email} creado exitosamente`, variant: "success" });
-
+      notify({ title: "Éxito", description: "Conductor creado", variant: "success" });
       setIsDialogOpen(false);
-      await loadConductores();
-    } catch (error: any) {
-      console.error("Error al crear conductor:", error);
-      notify({ title: "Error", description: getErrorMessage(error, "Error al crear conductor"), variant: "destructive" });
+      await loadData(); // Recargamos todo para actualizar estados de ocupación
+    } catch (error) {
+      notify({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -131,55 +149,48 @@ export default function ConductoresPage() {
     if (!editingConductor) return;
     setIsSubmitting(true);
     try {
-      const nombre = formData.get("nombre") as string;
-      const apellido = formData.get("apellido") as string;
-      const email = formData.get("email") as string;
-      const telefono = formData.get("telefono") as string;
       const vehiculoId = formData.get("vehiculoId") as string;
 
       await updateUsuario(editingConductor.id, {
-        nombre,
-        apellido,
-        email,
-        telefono,
+        nombre: formData.get("nombre") as string,
+        apellido: formData.get("apellido") as string,
+        email: formData.get("email") as string,
+        telefono: formData.get("telefono") as string,
       });
 
       if (vehiculoId === "ninguno") {
         if (editingConductor.vehiculoProveedorId) {
           await unassignOperadorFromVehiculo(editingConductor.vehiculoProveedorId, editingConductor.id);
         }
-      } else if (vehiculoId && vehiculoId !== editingConductor.vehiculoProveedorId) {
+      } else if (vehiculoId !== editingConductor.vehiculoProveedorId) {
         if (editingConductor.vehiculoProveedorId) {
           await unassignOperadorFromVehiculo(editingConductor.vehiculoProveedorId, editingConductor.id);
         }
         await assignOperadorToVehiculo(vehiculoId, editingConductor.id);
       }
 
-      notify({ title: "Éxito", description: "Conductor actualizado correctamente", variant: "success" });
-
+      notify({ title: "Éxito", description: "Conductor actualizado", variant: "success" });
       setIsEditOpen(false);
-      setEditingConductor(null);
-      await loadConductores();
-    } catch (error: any) {
-      console.error("Error al actualizar conductor:", error);
-      notify({ title: "Error", description: getErrorMessage(error, "Error al actualizar conductor"), variant: "destructive" });
+      await loadData();
+    } catch (error) {
+      notify({ title: "Error", description: getErrorMessage(error), variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteConductor = async (conductor: Usuario) => {
-    const confirmed = await confirmDelete(`¿Estás seguro de eliminar al conductor ${conductor.email}?`);
+    const confirmed = await confirmDelete(`¿Eliminar a ${conductor.email}?`);
     if (!confirmed) return;
     try {
       if (conductor.vehiculoProveedorId) {
         await unassignOperadorFromVehiculo(conductor.vehiculoProveedorId, conductor.id);
       }
       await deleteUsuario(conductor.id);
-      notify({ title: "Conductor eliminado", variant: "success" });
-      await loadConductores();
-    } catch (e: any) {
-      notify({ title: "Error", description: getErrorMessage(e, "Error al eliminar conductor"), variant: "destructive" });
+      notify({ title: "Eliminado", variant: "success" });
+      await loadData();
+    } catch (e) {
+      notify({ title: "Error", description: getErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -191,6 +202,7 @@ export default function ConductoresPage() {
       </div>
 
       <div className="flex gap-4">
+        {/* MODAL CREAR */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>+ Agregar Conductor</Button>
@@ -201,47 +213,37 @@ export default function ConductoresPage() {
             </DialogHeader>
             <form onSubmit={(e) => { e.preventDefault(); handleAddConductor(new FormData(e.currentTarget)); }} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="nombre">Nombre</Label>
                   <Input id="nombre" name="nombre" required />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="apellido">Apellido</Label>
                   <Input id="apellido" name="apellido" required />
                 </div>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" name="email" type="email" required />
               </div>
-              <div>
-                <Label htmlFor="telefono">Teléfono</Label>
-                <Input id="telefono" name="telefono" type="tel" />
-              </div>
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Contraseña Temporal</Label>
                 <Input id="password" name="password" type="password" required />
               </div>
-              <div>
-                <Label htmlFor="vehiculoId">Vehículo Asignado</Label>
-                <Select name="vehiculoId" disabled={vehiculosLoading}>
+              <div className="space-y-2">
+                <Label>Vehículo Asignado (Solo Libres)</Label>
+                <Select name="vehiculoId" defaultValue="ninguno">
                   <SelectTrigger>
-                    <SelectValue placeholder={vehiculosLoading ? "Cargando..." : "Sin vehículo asignado"} />
+                    <SelectValue placeholder="Seleccionar vehículo" />
                   </SelectTrigger>
-                  {vehiculosLoading ? (
-                    <SelectContent>
-                      <SelectItem value="loading" disabled>Cargando...</SelectItem>
-                    </SelectContent>
-                  ) : (
-                    <SelectContent>
-                      <SelectItem value="ninguno">Sin vehículo</SelectItem>
-                      {vehiculos.map((v) => (
-                        <SelectItem key={v.id} value={v.id}>
-                          {v.marca} {v.modelo} ({v.patente})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  )}
+                  <SelectContent>
+                    <SelectItem value="ninguno">Sin vehículo</SelectItem>
+                    {vehiculosLibres.map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.marca} {v.modelo} ({v.patente})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -251,6 +253,7 @@ export default function ConductoresPage() {
           </DialogContent>
         </Dialog>
 
+        {/* MODAL EDITAR */}
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent>
             <DialogHeader>
@@ -259,45 +262,32 @@ export default function ConductoresPage() {
             {editingConductor && (
               <form onSubmit={(e) => { e.preventDefault(); handleUpdateConductor(new FormData(e.currentTarget)); }} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="edit-nombre">Nombre</Label>
                     <Input id="edit-nombre" name="nombre" defaultValue={editingConductor.nombre} required />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="edit-apellido">Apellido</Label>
                     <Input id="edit-apellido" name="apellido" defaultValue={editingConductor.apellido} required />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="edit-email">Email</Label>
-                  <Input id="edit-email" name="email" type="email" defaultValue={editingConductor.email} required />
-                </div>
-                <div>
-                  <Label htmlFor="edit-telefono">Teléfono</Label>
-                  <Input id="edit-telefono" name="telefono" type="tel" defaultValue={editingConductor.telefono || ""} />
-                </div>
-              <div>
-                <Label htmlFor="edit-vehiculoId">Vehículo Asignado</Label>
-                <Select name="vehiculoId" defaultValue={editingConductor.vehiculoProveedorId || "ninguno"} disabled={vehiculosLoading}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={vehiculosLoading ? "Cargando..." : "Sin vehículo asignado"} />
-                  </SelectTrigger>
-                  {vehiculosLoading ? (
-                    <SelectContent>
-                      <SelectItem value="loading" disabled>Cargando...</SelectItem>
-                    </SelectContent>
-                  ) : (
+                <div className="space-y-2">
+                  <Label>Vehículo Asignado</Label>
+                  <Select name="vehiculoId" defaultValue={editingConductor.vehiculoProveedorId || "ninguno"}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ninguno">Sin vehículo</SelectItem>
-                      {vehiculos.map((v) => (
+                      {vehiculosParaEdicion.map((v) => (
                         <SelectItem key={v.id} value={v.id}>
                           {v.marca} {v.modelo} ({v.patente})
+                          {v.id === editingConductor?.vehiculoProveedorId ? " (actual)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  )}
-                </Select>
-              </div>
+                  </Select>
+                </div>
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting ? "Guardando..." : "Guardar Cambios"}
                 </Button>
@@ -315,77 +305,42 @@ export default function ConductoresPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <p className="text-gray-600">Cargando conductores...</p>
-          ) : conductores.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600">No hay conductores registrados</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Conductor</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Vehículo Asignado</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Estado</th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-600">Acciones</th>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b font-medium text-gray-500">
+                  <th className="text-left py-3 px-4">Conductor</th>
+                  <th className="text-left py-3 px-4">Vehículo</th>
+                  <th className="text-right py-3 px-4">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conductores.map((conductor) => (
+                  <tr key={conductor.id} className="border-b hover:bg-gray-50">
+                    <td className="py-3 px-4">
+                      <p className="font-semibold">{conductor.nombre} {conductor.apellido}</p>
+                      <p className="text-xs text-gray-400">{conductor.email}</p>
+                    </td>
+                    <td className="py-3 px-4">
+                      {conductor.vehiculoProveedor ? (
+                        <span>{conductor.vehiculoProveedor.marca} ({conductor.vehiculoProveedor.patente})</span>
+                      ) : (
+                        <span className="text-gray-400 italic">Libre</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => { setEditingConductor(conductor); setIsEditOpen(true); }}>
+                        Editar
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-red-500" onClick={() => handleDeleteConductor(conductor)}>
+                        Eliminar
+                      </Button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {conductores.map((conductor) => (
-                    <tr key={conductor.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <p className="font-semibold">
-                          {conductor.nombre} {conductor.apellido}
-                        </p>
-                        <p className="text-sm text-gray-600">{conductor.email}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        {conductor.vehiculoProveedor ? (
-                          <span className="text-sm">
-                            {conductor.vehiculoProveedor.marca} {conductor.vehiculoProveedor.modelo}
-                            <span className="text-gray-500 ml-1">
-                              ({conductor.vehiculoProveedor.patente})
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="text-sm text-gray-400">Sin asignar</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`text-sm ${conductor.isActive ? "text-green-600" : "text-red-600"}`}>
-                          {conductor.isActive ? "Activo" : "Inactivo"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setEditingConductor(conductor);
-                              setIsEditOpen(true);
-                            }}
-                          >
-                            Gestionar
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => handleDeleteConductor(conductor)}
-                          >
-                            Eliminar
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
