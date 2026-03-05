@@ -372,7 +372,7 @@ export default function SolicitudesPage() {
 
                 <div className="space-y-2">
                   <Label>Ubicación exacta *</Label>
-                  <div className="h-[300px] w-full border rounded-md overflow-hidden relative">
+                  <div className="h-75 w-full border rounded-md overflow-hidden relative">
                     <MapSelector
                       onLocationChange={(lat, lng, address) => {
                         setFormLocation(prev => ({
@@ -544,7 +544,7 @@ export default function SolicitudesPage() {
                           {s.prioridad}
                         </span>
                       </td>
-                      <td className="py-2 px-3 break-words" title={s.direccion}>
+                      <td className="py-2 px-3 wrap-break-word" title={s.direccion}>
                         {s.direccion}
                       </td>
                       <td className="py-2 px-3">

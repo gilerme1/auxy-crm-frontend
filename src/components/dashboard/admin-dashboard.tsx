@@ -52,7 +52,7 @@ export function AdminDashboard() {
 
   const estadosData = Object.entries(s.estados || {}).map(([name, value]) => ({ name, value }));
   const colors = ['#4ade80','#f472b6','#60a5fa','#facc15','#a78bfa','#34d399'];
-  const tendencia = s.tendenciaHoy || { hoy:0, ayer:0 };
+const tendenciaHoy = s.tendenciaHoy || { hoy:0, ayer:0 };
 
   return (
     <div className="space-y-6 p-4">
@@ -140,8 +140,8 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent className="p-6">
           <div className="flex gap-4 text-sm text-gray-700">
-            <div>Hoy: {tendencia?.hoy ?? 0}</div>
-            <div>Ayer: {tendencia?.ayer ?? 0}</div>
+            <div>Hoy: {tendenciaHoy.hoy ?? 0}</div>
+            <div>Ayer: {tendenciaHoy.ayer ?? 0}</div>
           </div>
         </CardContent>
       </Card>

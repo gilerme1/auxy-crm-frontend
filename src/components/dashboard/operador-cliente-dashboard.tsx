@@ -24,11 +24,17 @@ export function OperadorClienteDashboard() {
     }
   };
 
-  const misSolicitudes = solicitudes.filter(s => s.solicitadoPor?.id === user?.id);
-  const misActivas = misSolicitudes.filter(s => ["PENDIENTE","ASIGNADO","EN_CAMINO","EN_SERVICIO"].includes(s.estado));
+  const userId = user?.id;
+  const misSolicitudes = solicitudes.filter(s => {
+    const solicitado = s.solicitadoPor as any;
+    return solicitado?.id === userId;
+  });
+
+  const misActivas = misSolicitudes.filter(s => 
+    ["PENDIENTE", "ASIGNADO", "EN_CAMINO", "EN_SERVICIO"].includes(s.estado)
+  );
   const misFinalizadas = misSolicitudes.filter(s => s.estado === "FINALIZADO");
   const recientes = misSolicitudes.slice(0, 5);
-
   if (loading) {
     return (
       <div className="space-y-6">

@@ -213,7 +213,7 @@ export interface Solicitud {
   observaciones?: string;
   fechaSolicitud: string;
   vehiculo?: { patente: string; marca: string; modelo: string };
-  solicitadoPor?: { nombre: string; apellido: string };
+  solicitadoPor?: { id?: string; nombre: string; apellido: string };
   proveedor?: { razonSocial: string };
   atendidoPor?: { id: string; nombre: string; apellido: string };
   vehiculoProveedor?: { id: string; patente: string; marca: string; modelo: string };
