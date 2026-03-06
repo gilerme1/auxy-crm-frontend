@@ -372,18 +372,16 @@ export default function SolicitudesPage() {
 
                 <div className="space-y-2">
                   <Label>Ubicación exacta *</Label>
-                  <div className="h-75 w-full border rounded-md overflow-hidden relative">
-                    <MapSelector
-                      onLocationChange={(lat, lng, address) => {
-                        setFormLocation(prev => ({
-                          lat,
-                          lng,
-                          address: address || prev.address
-                        }));
-                      }}
-                      className="h-full w-full"
-                    />
-                  </div>
+                  <MapSelector
+                    onLocationChange={(lat, lng, address) => {
+                      setFormLocation(prev => ({
+                        lat,
+                        lng,
+                        address: address || prev.address
+                      }));
+                    }}
+                    className="h-[300px] w-full rounded-md border overflow-hidden"
+                  />
                   <div className="flex gap-4 text-[10px] text-muted-foreground uppercase font-mono">
                     <span>Lat: {formLocation.lat.toFixed(6)}</span>
                     <span>Lon: {formLocation.lng.toFixed(6)}</span>

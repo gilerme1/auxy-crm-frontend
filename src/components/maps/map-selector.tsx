@@ -47,13 +47,14 @@ function MapEvents({ onLocationChange }: { onLocationChange: (lat: number, lng: 
 }
 
 export default function MapSelector({ 
-  initialPosition = [-34.6037, -58.3816], // Default: Buenos Aires
+  initialPosition = [-38.4161, -63.6167], // Default: centro de Argentina
   onLocationChange,
   className = "h-[400px] w-full rounded-md border overflow-hidden"
 }: MapSelectorProps) {
   const [position, setPosition] = useState<[number, number]>(initialPosition);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
 
   const handleMarkerDrag = useCallback((e: L.LeafletEvent) => {
     const marker = e.target as L.Marker;
@@ -70,22 +71,28 @@ export default function MapSelector({
   const searchAddress = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!searchQuery.trim()) return;
-
+    // Limpiar error previo
+    setSearchError("");
     setIsSearching(true);
     try {
+      // Usar Nominatim con countrycodes=ar
       const response = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=1&lang=es&bbox=-73.5,-55.0,-53.5,-21.8`
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&limit=1&countrycodes=ar`,
+        { headers: { "Accept-Language": "es", "User-Agent": "AuxyCRM/1.0" } }
       );
       const data = await response.json();
 
-      if (data.features && data.features.length > 0) {
-        const [lng, lat] = data.features[0].geometry.coordinates;
-        const newPos: [number, number] = [lat, lng];
-        setPosition(newPos);
-        onLocationChange(lat, lng, data.features[0].properties.name || searchQuery);
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        setPosition([lat, lng]);
+        onLocationChange(lat, lng, data[0].display_name || searchQuery);
+      } else {
+        setSearchError("No se encontró esa dirección en Argentina.");
       }
     } catch (error) {
       console.error("Error searching address:", error);
+      setSearchError("Error al buscar la dirección");
     } finally {
       setIsSearching(false);
     }
@@ -98,7 +105,7 @@ export default function MapSelector({
         <div className="relative flex-1">
           <input
             type="text"
-            placeholder="Buscar dirección en Argentina..."
+            placeholder="Ej: Corrientes 1234, Córdoba"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && searchAddress()}
@@ -107,6 +114,7 @@ export default function MapSelector({
           <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
         </div>
         <button
+          type="button"
           onClick={() => searchAddress()}
           disabled={isSearching}
           className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
@@ -118,7 +126,7 @@ export default function MapSelector({
       <div className={className}>
         <MapContainer 
           center={position} 
-          zoom={13} 
+          zoom={5} 
           style={{ height: "100%", width: "100%" }}
           scrollWheelZoom={true}
         >
@@ -139,6 +147,9 @@ export default function MapSelector({
       <p className="text-xs text-muted-foreground mt-1">
         Puedes buscar una dirección o arrastrar el marcador al punto exacto.
       </p>
+      {searchError && (
+        <p className="text-xs text-red-500 mt-1">{searchError}</p>
+      )}
     </div>
   );
 }

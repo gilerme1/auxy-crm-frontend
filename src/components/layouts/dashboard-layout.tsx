@@ -120,8 +120,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 p-4 space-y-1">
+      {/* Nav */}
+      <nav className="flex-1 p-4 space-y-1">
           <div className="flex flex-col px-3 pt-2 pb-3">
             <p className="text-[11px] font-black uppercase tracking-wider text-gray-400">Dashboard</p>
             <p className="text-[10px] font-bold text-auxy-navy uppercase tracking-widest opacity-80 mt-0.5">
@@ -132,6 +132,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <Link
               key={link.href}
               href={link.href}
+              onClick={() => setIsMobileMenuOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-semibold
                 ${isActive(link.href)
                   ? "bg-auxy-navy text-white shadow-md relative before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-2/3 before:bg-auxy-yellow before:rounded-r-md"
@@ -147,7 +148,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-hidden w-full relative">
+      <div className="flex-1 min-w-0 flex flex-col overflow-x-auto overflow-y-auto w-full relative">
         {/* Header */}
         <div className="bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 md:px-8 py-4 flex justify-between items-center shadow-sm sticky top-0 z-30">
           <div className="flex items-center gap-3">
@@ -214,9 +215,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
 
       {/* Content with error boundary */}
-      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 md:p-8 w-full">
+      <main className="flex-1 overflow-x-auto overflow-y-auto p-4 md:p-8 w-full">
         <ErrorBoundary>{children}</ErrorBoundary>
-      </div>
+      </main>
       </div>
     </div>
   );

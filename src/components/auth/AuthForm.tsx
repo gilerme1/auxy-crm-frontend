@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { notify } from "@/lib/notifier";
+import { Eye, EyeOff } from "lucide-react";
 import { login, registerEmpresa, registerProveedor, getGoogleOAuthUrl } from "@/lib/api-auth";
 import { setAuthTokens } from "@/lib/auth-storage";
 import { useAuth } from "@/contexts/auth-context";
@@ -188,13 +189,20 @@ export function AuthForm() {
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" name="email" type="email" required />
                 </div>
-                <div className="relative w-full">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <input id="password" name="password" type={showLoginPwd ? 'text' : 'password'} required className="w-full border rounded px-3 py-2" />
-                  <button type="button" aria-label="toggle password" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowLoginPwd(v => !v)}>
-                    {showLoginPwd ? '👁️' : '👁'}
+              <div className="space-y-1">
+                <Label htmlFor="password">Contraseña</Label>
+                <div className="relative">
+                  <Input id="password" name="password" type={showLoginPwd ? 'text' : 'password'} required className="pr-10" />
+                  <button
+                    type="button"
+                    aria-label="Mostrar/ocultar contraseña"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowLoginPwd(v => !v)}
+                  >
+                    {showLoginPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
+              </div>
                 <Button
                   type="submit"
                   className="w-full bg-auxy-red hover:bg-red-700 text-white"
@@ -216,7 +224,7 @@ export function AuthForm() {
 
             <TabsContent value="register">
               <form onSubmit={(e) => { e.preventDefault(); handleRegister(new FormData(e.currentTarget)); }} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="nombre">Nombre</Label>
                     <Input id="nombre" name="nombre" placeholder="Ej: Juan" required />
@@ -318,12 +326,22 @@ export function AuthForm() {
                   </div>
                 </div>
 
-                <div className="relative w-full">
+                <div className="space-y-1">
                   <Label htmlFor="password">Contraseña</Label>
-                  <input id="password" name="password" type={showRegisterPwd ? 'text' : 'password'} placeholder={`Mínimo ${selectedRole === "PROVEEDOR_OPERADOR" ? "8" : "6"} caracteres`} minLength={selectedRole === "PROVEEDOR_OPERADOR" ? 8 : 6} required className="w-full border rounded px-3 py-2" />
-                  <button type="button" aria-label="toggle password" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowRegisterPwd(v => !v)}>
-                    {showRegisterPwd ? '👁️' : '👁'}
-                  </button>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showRegisterPwd ? 'text' : 'password'}
+                      placeholder={`Mínimo ${selectedRole === "PROVEEDOR_OPERADOR" ? "8" : "6"} caracteres`}
+                      minLength={selectedRole === "PROVEEDOR_OPERADOR" ? 8 : 6}
+                      required
+                      className="pr-10"
+                    />
+                    <button type="button" aria-label="Mostrar/ocultar contraseña" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowRegisterPwd(v => !v)}>
+                      {showRegisterPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <Button
                   type="submit"
