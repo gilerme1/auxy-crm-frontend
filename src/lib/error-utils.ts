@@ -19,6 +19,21 @@ function isAuthError(error: ErrorWithResponse): boolean {
   return error.response?.status === 401;
 }
 
+// Translators for common backend validation messages (Spanish)
+function translateValidationMessage(msg: string): string {
+  const map: Record<string, string> = {
+    "must be an email": "El email no tiene un formato válido",
+    "must be longer than or equal to 6 characters": "La contraseña debe tener al menos 6 caracteres",
+    "must be longer than or equal to 8 characters": "La contraseña debe tener al menos 8 caracteres",
+    "should not be empty": "Este campo es obligatorio",
+    "must be a string": "Valor inválido en uno de los campos",
+  };
+  for (const [key, value] of Object.entries(map)) {
+    if (msg.includes(key)) return value;
+  }
+  return msg;
+}
+
 /**
  * Extracts a human-readable error message from an API error or any other error.
  */
@@ -35,16 +50,18 @@ export function getErrorMessage(error: any, fallback: string = "Ha ocurrido un e
     }
     
     if (isAuthError(error)) {
+      const backendMsg = error.response?.data?.message;
+      if (backendMsg) {
+        const first = Array.isArray(backendMsg) ? backendMsg[0] : backendMsg;
+        return first;
+      }
       return "Sesión expirada. Por favor, inicia sesión nuevamente.";
     }
-    
+
     const backendMessage = error.response?.data?.message;
-    
     if (backendMessage) {
-      if (Array.isArray(backendMessage)) {
-        return backendMessage[0];
-      }
-      return backendMessage;
+      const msg = Array.isArray(backendMessage) ? backendMessage[0] : backendMessage;
+      return translateValidationMessage(String(msg));
     }
 
     if (error.response?.status === 500) {

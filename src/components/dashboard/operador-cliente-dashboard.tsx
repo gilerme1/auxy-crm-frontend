@@ -6,7 +6,7 @@ import { getSolicitudes, type Solicitud } from "@/lib/api-data";
 import Link from "next/link";
 import { Activity, CheckCircle2, ClipboardList, Plus, ChevronRight } from "lucide-react";
 
-export function OperadorClienteDashboard() {
+export function OperadorClienteDashboard({ mode = "operativo" }: { mode?: "operativo" | "reportes" }) {
   const { user } = useAuth();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +24,7 @@ export function OperadorClienteDashboard() {
     }
   };
 
-  const userId = user?.id;
+  const userId = (user as any)?.id ?? null;
   const misSolicitudes = solicitudes.filter(s => {
     const solicitado = s.solicitadoPor as any;
     return solicitado?.id === userId;

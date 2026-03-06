@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { DollarSign, Truck, ClipboardList, Activity, CheckCircle2 } from 'lucide-react';
 
 // Inicio AdminDashboard: estado operativo actual
-export function AdminDashboard() {
+export function AdminDashboard({ mode = "operativo" }: { mode?: "operativo" | "reportes" }) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -108,7 +108,8 @@ const tendenciaHoy = s.tendenciaHoy || { hoy:0, ayer:0 };
       </Card>
 
       {/* Distribución por tipo (tipo de auxilio) */}
-      <Card className="border-none shadow-sm">
+      { mode === "reportes" && (
+        <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">Tipo de Auxilio</CardTitle>
           <CardDescription>Distribución por tipo</CardDescription>
@@ -130,10 +131,12 @@ const tendenciaHoy = s.tendenciaHoy || { hoy:0, ayer:0 };
             <div className="p-6 text-sm text-gray-500">Sin datos</div>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
       {/* Tendencia - resumen simple para reporte */}
-      <Card className="border-none shadow-sm">
+      { mode === "reportes" && (
+        <Card className="border-none shadow-sm">
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">Tendencia</CardTitle>
           <CardDescription>Solicitudes hoy vs ayer</CardDescription>
@@ -144,7 +147,8 @@ const tendenciaHoy = s.tendenciaHoy || { hoy:0, ayer:0 };
             <div>Ayer: {tendenciaHoy.ayer ?? 0}</div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { getStatsProveedor } from "@/lib/api-data";
 import { DollarSign, Truck, Star, CheckCircle2, ClipboardList } from "lucide-react";
 
-export function ProviderDashboard() {
+export function ProviderDashboard({ mode = "operativo" }: { mode?: "operativo" | "reportes" }) {
   const { user } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -109,28 +109,29 @@ export function ProviderDashboard() {
         ))}
       </div>
 
-      {/* Distribución de estados */}
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">Estatus de Servicios</CardTitle>
-          <CardDescription>Carga de trabajo actual por fase</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          {estadosData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={estadosData} margin={{ left: 0, right: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="p-6 text-sm text-gray-500">Sin datos</div>
-          )}
-        </CardContent>
-      </Card>
+      { mode === "reportes" && (
+        <Card className="border-none shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">Estatus de Servicios</CardTitle>
+            <CardDescription>Carga de trabajo actual por fase</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            {estadosData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={estadosData} margin={{ left: 0, right: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="p-6 text-sm text-gray-500">Sin datos</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

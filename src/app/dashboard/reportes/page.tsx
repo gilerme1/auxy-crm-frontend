@@ -11,15 +11,15 @@ export default function ReportesPage() {
   if (!user) return null;
 
   if (user.rol === "SUPER_ADMIN") {
-    return <AdminReportesDashboard />;
+    return <AdminReportesDashboard mode="reportes" />;
   }
 
   if (user.rol === "PROVEEDOR_ADMIN") {
-    return <ProviderDashboard />;
+    return <ProviderDashboard mode="reportes" />;
   }
 
   if (user.rol === "CLIENTE_ADMIN") {
-    return <ClientDashboard />;
+    return <ClientDashboard mode="reportes" />;
   }
 
   // Para operadores sin acceso a reportes

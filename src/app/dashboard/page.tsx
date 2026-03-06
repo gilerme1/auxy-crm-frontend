@@ -47,11 +47,11 @@ export default function DashboardPage() {
 
   return (
     <Suspense fallback={<LoadingFallback />}> 
-      {user.rol === 'SUPER_ADMIN' && <AdminDashboard />}
-      {user.rol === 'CLIENTE_ADMIN' && <ClientDashboard />}
-      {user.rol === 'CLIENTE_OPERADOR' && <OperadorClienteDashboard />}
-      {user.rol === 'PROVEEDOR_ADMIN' && <ProviderDashboard />}
-      {user.rol === 'PROVEEDOR_OPERADOR' && <OperadorProveedorDashboard />}
+      {user.rol === 'SUPER_ADMIN' && <AdminDashboard mode="operativo" />}
+      {user.rol === 'CLIENTE_ADMIN' && <ClientDashboard mode="operativo" />}
+      {user.rol === 'CLIENTE_OPERADOR' && <OperadorClienteDashboard mode="operativo" />}
+      {user.rol === 'PROVEEDOR_ADMIN' && <ProviderDashboard mode="operativo" />}
+      {user.rol === 'PROVEEDOR_OPERADOR' && <OperadorProveedorDashboard mode="operativo" />}
       {/* Rol no contemplado */}
       {!['SUPER_ADMIN','CLIENTE_ADMIN','CLIENTE_OPERADOR','PROVEEDOR_ADMIN','PROVEEDOR_OPERADOR'].includes(user.rol) && (
         <div className="p-8 text-center">Rol no reconocido: {user.rol}</div>

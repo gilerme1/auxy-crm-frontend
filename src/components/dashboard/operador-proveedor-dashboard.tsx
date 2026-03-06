@@ -4,9 +4,10 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { getSolicitudes, type Solicitud } from "@/lib/api-data";
 import Link from "next/link";
-import { Activity, Truck, CheckCircle2, ChevronRight } from "lucide-react";
+import { Activity, Truck, CheckCircle2, ChevronRight, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export function OperadorProveedorDashboard() {
+export function OperadorProveedorDashboard({ mode = "operativo" }: { mode?: "operativo" | "reportes" }) {
   const { user } = useAuth();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,10 +29,17 @@ export function OperadorProveedorDashboard() {
   const misFinalizadas = solicitudes.filter(s => s.atendidoPor?.id === user?.id && s.estado === "FINALIZADO");
   const pendientesMarketplace = solicitudes.filter(s => s.estado === "PENDIENTE");
 
+  // Calcular reputación personal basada en calificaciones de solicitudes terminadas
+  const solicitudesCalificadas = solicitudes.filter(s => s.atendidoPor?.id === user?.id && s.estado === "FINALIZADO" && (s as any).calificacion != null);
+  const promedioPersonal = solicitudesCalificadas.length > 0
+    ? solicitudesCalificadas.reduce((sum, s) => sum + ((s as any).calificacion ?? 0), 0) / solicitudesCalificadas.length
+    : null;
+
   const kpis = [
     { label: "Mis servicios activos", value: misAsignadas.length, icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
     { label: "Mis servicios finalizados", value: misFinalizadas.length, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Marketplace pendientes", value: pendientesMarketplace.length, icon: Truck, color: "text-sky-700", bg: "bg-slate-100" },
+    { label: "Disponibles ahora", value: pendientesMarketplace.length, icon: Truck, color: "text-sky-700", bg: "bg-slate-100" },
+    { label: "Mi reputación", value: promedioPersonal != null ? `${promedioPersonal.toFixed(1)} ★` : "Sin calificaciones aún", icon: Star, color: "text-amber-600", bg: "bg-amber-50" },
   ];
 
   return (
@@ -75,9 +83,13 @@ export function OperadorProveedorDashboard() {
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-gray-400">#{s.numero}</span>
                   <span>{s.tipo}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.estado === 'EN_SERVICIO' ? 'bg-blue-100' : 'bg-slate-100'}`}>{s.estado}</span>
+                <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.estado === 'EN_SERVICIO' ? 'bg-blue-100' : 'bg-slate-100'}`}>{s.estado}</span>
                 </div>
-                <Link href={`/dashboard/solicitudes/${s.id}`}><ChevronRight className="h-3 w-3"/></Link>
+                <Link href={`/dashboard/solicitudes/${s.id}`}>
+                  <Button size="sm" variant="outline" className="text-xs h-8">
+                    Gestionar <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </Link>
               </div>
             ))
           )}
@@ -86,21 +98,25 @@ export function OperadorProveedorDashboard() {
 
       <Card className="border-none shadow-sm">
         <CardHeader>
-          <CardTitle className="text-sm font-bold uppercase tracking-wider text-gray-500">Marketplace</CardTitle>
-          <CardDescription>Solicitudes pendientes para tomar</CardDescription>
+          <CardTitle className="text-sm font-bold uppercase tracking-wider text-gray-500">Servicios disponibles</CardTitle>
+          <CardDescription>Nuevas solicitudes sin asignar</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {pendientesMarketplace.length === 0 ? (
             <div className="text-center py-4 text-gray-400 text-sm">Ninguna pendiente</div>
-          ) : pendientesMarketplace.slice(0,5).map((s) => (
-            <div key={s.id} className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{s.tipo}</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${s.prioridad === 'URGENTE' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>{s.prioridad}</span>
-              </div>
-              <Link href={`/dashboard/solicitudes/${s.id}`}><ChevronRight className="h-3 w-3" /></Link>
-            </div>
-          ))}
+              ) : pendientesMarketplace.slice(0,5).map((s) => (
+                <div key={s.id} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{s.tipo}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${s.prioridad === 'URGENTE' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>{s.prioridad}</span>
+                  </div>
+                  <Link href={`/dashboard/solicitudes/${s.id}`}>
+                    <Button size="sm" className="text-xs h-8 bg-green-600 hover:bg-green-700 text-white">
+                      Tomar
+                    </Button>
+                  </Link>
+                </div>
+              ))}
         </CardContent>
       </Card>
     </div>

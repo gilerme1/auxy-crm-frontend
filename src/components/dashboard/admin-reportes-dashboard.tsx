@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 type DistribTipo = { tipo: string; cantidad: number };
 
-export function AdminReportesDashboard() {
+export function AdminReportesDashboard({ mode = "reportes" }: { mode?: "operativo" | "reportes" }) {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 

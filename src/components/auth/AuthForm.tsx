@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { notify } from "@/lib/notifier";
 import { login, registerEmpresa, registerProveedor, getGoogleOAuthUrl } from "@/lib/api-auth";
 import { setAuthTokens } from "@/lib/auth-storage";
 import { useAuth } from "@/contexts/auth-context";
@@ -35,8 +35,11 @@ import type { RolUsuario } from "@/types/auth";
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRole, setSelectedRole] = useState("CLIENTE_OPERADOR");
-  const { toast } = useToast();
+  // Notificaciones centralizadas con Sonner
   const router = useRouter();
+  // Password visibility toggles
+  const [showLoginPwd, setShowLoginPwd] = useState(false);
+  const [showRegisterPwd, setShowRegisterPwd] = useState(false);
   const { refetchUser } = useAuth();
 
   const handleLogin = async (formData: FormData) => {
@@ -52,11 +55,11 @@ export function AuthForm() {
       });
 
       await refetchUser();
-      toast({ title: "Inicio de sesión exitoso" });
+      notify({ title: "Inicio de sesión exitoso", variant: "success" });
       router.replace("/");
     } catch (error: any) {
       console.error(error);
-      toast({
+      notify({
         title: "Error al iniciar sesión",
         description: getErrorMessage(error, "Verifica tus credenciales"),
         variant: "destructive",
@@ -88,7 +91,7 @@ export function AuthForm() {
       const safeContactoTelefono = contactoTelefono.trim() || undefined;
 
       if (rolForm === "PROVEEDOR_OPERADOR" && serviciosOfrecidos.length === 0) {
-        toast({ title: "Faltan servicios", description: "Debes seleccionar al menos un servicio ofrecido.", variant: "destructive" });
+        notify({ title: "Faltan servicios", description: "Debes seleccionar al menos un servicio ofrecido.", variant: "destructive" });
         setIsLoading(false);
         return;
       }
@@ -129,7 +132,7 @@ export function AuthForm() {
           refreshToken: res.refreshToken,
         });
         await refetchUser();
-        toast({ title: "Registro exitoso", description: "Iniciando sesión..." });
+        notify({ title: "Registro exitoso", description: "Iniciando sesión...", variant: "success" });
         router.replace("/");
       }
 
@@ -137,7 +140,7 @@ export function AuthForm() {
       
     } catch (error: any) {
       console.error("Registration error:", error);
-      toast({
+      notify({
         title: "Error al registrarse",
         description: getErrorMessage(error, "No se pudo completar el registro. Intenta nuevamente."),
         variant: "destructive",
@@ -185,14 +188,12 @@ export function AuthForm() {
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" name="email" type="email" required />
                 </div>
-                <div>
+                <div className="relative w-full">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                  />
+                  <input id="password" name="password" type={showLoginPwd ? 'text' : 'password'} required className="w-full border rounded px-3 py-2" />
+                  <button type="button" aria-label="toggle password" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowLoginPwd(v => !v)}>
+                    {showLoginPwd ? '👁️' : '👁'}
+                  </button>
                 </div>
                 <Button
                   type="submit"
@@ -317,16 +318,12 @@ export function AuthForm() {
                   </div>
                 </div>
 
-                <div>
+                <div className="relative w-full">
                   <Label htmlFor="password">Contraseña</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder={`Mínimo ${selectedRole === "PROVEEDOR_OPERADOR" ? "8" : "6"} caracteres`}
-                    minLength={selectedRole === "PROVEEDOR_OPERADOR" ? 8 : 6}
-                    required
-                  />
+                  <input id="password" name="password" type={showRegisterPwd ? 'text' : 'password'} placeholder={`Mínimo ${selectedRole === "PROVEEDOR_OPERADOR" ? "8" : "6"} caracteres`} minLength={selectedRole === "PROVEEDOR_OPERADOR" ? 8 : 6} required className="w-full border rounded px-3 py-2" />
+                  <button type="button" aria-label="toggle password" className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setShowRegisterPwd(v => !v)}>
+                    {showRegisterPwd ? '👁️' : '👁'}
+                  </button>
                 </div>
                 <Button
                   type="submit"
